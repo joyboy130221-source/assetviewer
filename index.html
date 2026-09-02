@@ -1,25 +1,67 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Asset ID Viewer" />
-  <title>Asset ID Viewer</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asset Viewer</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="page">
-    <section class="card" aria-labelledby="asset-title">
-      <div class="badge">Asset Information</div>
+  <main class="page-shell">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">MAXIMO ASSET</p>
+        <h1>Asset Viewer</h1>
+        <p id="requestSummary" class="subtitle">Reading asset ID from the URL…</p>
+      </div>
+      <button id="refreshButton" class="refresh-button" type="button">Refresh</button>
+    </header>
 
-      <h1 id="asset-title">Current Asset Id is</h1>
-
-      <div id="assetId" class="asset-id">Loading...</div>
-
-      <p id="status" class="status"></p>
+    <section id="loadingState" class="state-card" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Loading asset information…</span>
     </section>
-  </main>
 
-  <script src="script.js"></script>
+    <section id="errorState" class="state-card error" hidden aria-live="assertive">
+      <h2>Unable to load asset</h2>
+      <p id="errorMessage"></p>
+    </section>
+
+    <section id="emptyState" class="state-card" hidden>
+      <h2>Asset not found</h2>
+      <p>No asset matched the supplied asset ID for site BEDFORD.</p>
+    </section>
+
+    <div id="assetContent" hidden>
+      <section class="summary-card">
+        <div>
+          <p class="label">Asset number</p>
+          <h2 id="assetNumber">—</h2>
+          <p id="assetDescription" class="description">—</p>
+        </div>
+        <span id="assetStatus" class="status-badge">—</span>
+      </section>
+
+      <section id="summaryGrid" class="summary-grid"></section>
+
+      <section class="attributes-card">
+        <div class="attributes-header">
+          <div>
+            <h2>All attributes</h2>
+            <p id="attributeCount" class="subtitle"></p>
+          </div>
+          <input id="attributeSearch" type="search" placeholder="Search attributes" aria-label="Search attributes">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Attribute</th><th>Value</th></tr></thead>
+            <tbody id="attributeRows"></tbody>
+          </table>
+        </div>
+        <p id="noAttributes" class="no-results" hidden>No matching attributes.</p>
+      </section>
+    </div>
+  </main>
+  <script src="app.js"></script>
 </body>
 </html>

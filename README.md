@@ -1,69 +1,33 @@
-# Vercel Asset ID Viewer
+# Maximo Asset Viewer
 
-A small public static web application that reads `assetId` from the URL query string.
+Open the deployed page with an asset query parameter:
 
-## Example
+`https://assetviewer.vercel.app/?assetId=V6-0404`
 
-After deploying to Vercel:
-
-```text
-https://your-app.vercel.app/?assetId=ASSET-001
-```
-
-The page displays:
-
-```text
-Current Asset Id is
-ASSET-001
-```
-
-## Local test
-
-You can open `index.html` directly, but for the URL parameter it is easier to run a simple HTTP server.
-
-For example:
-
-```bash
-npx serve .
-```
-
-Then open:
-
-```text
-http://localhost:3000/?assetId=ASSET-001
-```
+The value of `assetId` is safely inserted into the Maximo `oslc.where` filter. The response is read from `member[0]`; the page shows a summary and every attribute returned by the API.
 
 ## Deploy to Vercel
 
-1. Upload this folder to GitHub, GitLab, or Bitbucket.
-2. In Vercel, create a New Project.
-3. Import the repository.
-4. Framework Preset: `Other`.
-5. No build command is required.
-6. Deploy.
+1. Extract this ZIP and open the `assetviewer` folder.
+2. Import the folder/repository into Vercel, or run `npx vercel`.
+3. In **Vercel → Project Settings → Environment Variables**, create:
+   - Name: `MAXIMO_API_KEY`
+   - Value: your Maximo API key
+   - Environments: Production, Preview, and Development as needed
+4. Redeploy after adding the environment variable.
+5. Test: `https://your-domain.vercel.app/?assetId=V6-0404`
 
-You can also deploy with the Vercel CLI:
+The API key is intentionally kept in a server-side environment variable. Do not put it in `app.js`, because browser visitors could read it.
 
-```bash
-npm install -g vercel
-vercel
-```
+## Local development
 
-## iframe example
+1. Install the Vercel CLI: `npm install -g vercel`
+2. Create `.env.local` containing `MAXIMO_API_KEY=your_key_here`
+3. Run `vercel dev`
+4. Visit `http://localhost:3000/?assetId=V6-0404`
 
-```html
-<iframe
-  src="https://your-app.vercel.app/?assetId=ASSET-001"
-  width="100%"
-  height="300"
-  style="border:0;"
-></iframe>
-```
+## Notes
 
-The included `vercel.json` sets a CSP `frame-ancestors *` policy so the page can be embedded by other sites.
-
-For production, it is safer to replace `*` with the exact parent application domain, for example:
-
-```text
-frame-ancestors 'self' https://your-parent-app.example.com
-```
+- The Maximo site is fixed to `BEDFORD` in `api/asset.js`.
+- The included response header allows the page to be embedded in an iframe.
+- Whether the Vercel server can call Maximo depends on the Maximo endpoint being reachable from the public internet and accepting the configured key.
