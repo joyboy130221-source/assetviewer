@@ -7,8 +7,13 @@ body { margin: 0; min-width: 280px; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 6px; font-size: clamp(28px, 4vw, 42px); }
 .subtitle { margin-bottom: 0; color: #68758b; }
-.refresh-button { padding: 10px 18px; border: 0; border-radius: 10px; background: #1769e0; color: white; font-weight: 700; cursor: pointer; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.refresh-button, .primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border: 0; border-radius: 10px; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
+.refresh-button, .primary-button { background: #1769e0; color: white; }
+.secondary-button { border: 1px solid #cbd7e7; background: white; color: #31415c; }
 .refresh-button:hover { background: #0e56bd; }
+.primary-button:hover { background: #0e56bd; }
+.secondary-button:hover { background: #f0f5fb; }
 .state-card, .summary-card, .attributes-card, .metric { border: 1px solid #dde5f0; border-radius: 16px; background: white; box-shadow: 0 8px 30px rgba(33, 53, 85, .06); }
 .state-card { display: flex; gap: 12px; align-items: center; margin-top: 28px; padding: 24px; }
 .state-card[hidden] { display: none; }
@@ -40,3 +45,23 @@ a { color: #1769e0; }
 .no-results { margin: 20px 0 0; color: #68758b; text-align: center; }
 @media (max-width: 760px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } .attributes-header { align-items: stretch; flex-direction: column; } input[type="search"] { width: 100%; } }
 @media (max-width: 480px) { .page-shell { width: min(100% - 20px, 1100px); padding-top: 20px; } .page-header { align-items: flex-start; } .summary-card { align-items: flex-start; flex-direction: column; } .summary-grid { grid-template-columns: 1fr; } .attributes-card, .summary-card { padding: 18px; } }
+
+/* Work order form */
+.form-card { margin-top: 28px; padding: 28px; border: 1px solid #dde5f0; border-radius: 16px; background: white; box-shadow: 0 8px 30px rgba(33, 53, 85, .06); }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.form-field { display: flex; flex-direction: column; gap: 7px; }
+.form-field.full-width { grid-column: 1 / -1; }
+.form-field label { color: #31415c; font-size: 14px; font-weight: 750; }
+.required { color: #c72d2d; }
+.form-field input, .form-field select, .form-field textarea { width: 100%; padding: 11px 13px; border: 1px solid #cbd6e4; border-radius: 10px; background: white; color: #14213d; font: inherit; }
+.form-field textarea { min-height: 100px; resize: vertical; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: #1769e0; outline: 3px solid rgba(23, 105, 224, .12); }
+.form-actions { display: flex; justify-content: flex-end; margin-top: 24px; }
+.form-message { margin: 0 0 20px; padding: 14px 16px; border-radius: 10px; }
+.form-message.error-message { border: 1px solid #efb2b2; background: #fff4f4; color: #9a2424; }
+.form-message.success-message { border: 1px solid #a9ddbd; background: #f1fcf5; color: #16723a; }
+.loading-overlay { position: fixed; z-index: 1000; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(16, 28, 50, .55); backdrop-filter: blur(2px); }
+.loading-overlay[hidden] { display: none; }
+.loading-panel { display: flex; align-items: center; gap: 14px; padding: 22px 26px; border-radius: 14px; background: white; box-shadow: 0 15px 50px rgba(0, 0, 0, .2); font-weight: 750; }
+@media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } .form-field.full-width { grid-column: auto; } }
+@media (max-width: 560px) { .page-header { flex-direction: column; } .header-actions { width: 100%; flex-wrap: wrap; } .header-actions > * { flex: 1; } .form-card { padding: 18px; } }

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Work Order</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">MAXIMO WORK ORDER</p>
+        <h1>Create Work Order</h1>
+        <p class="subtitle">Complete all fields before submitting the work order to Maximo.</p>
+      </div>
+      <a id="backToAsset" class="secondary-button" href="index.html">Back to Asset</a>
+    </header>
+
+    <section class="form-card">
+      <div id="formMessage" class="form-message" hidden role="alert"></div>
+      <form id="workOrderForm" novalidate>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="siteid">Site ID <span class="required">*</span></label>
+            <input id="siteid" name="siteid" value="BEDFORD" maxlength="20" required>
+          </div>
+          <div class="form-field">
+            <label for="orgid">Organization ID <span class="required">*</span></label>
+            <input id="orgid" name="orgid" value="EAGLENA" maxlength="20" required>
+          </div>
+          <div class="form-field">
+            <label for="assetnum">Asset Number <span class="required">*</span></label>
+            <input id="assetnum" name="assetnum" placeholder="Example: V6-0401" maxlength="50" required>
+          </div>
+          <div class="form-field">
+            <label for="location">Location <span class="required">*</span></label>
+            <select id="location" name="location" required>
+              <option value="">Select location</option>
+              <option value="UPS">UPS</option><option value="DHL">DHL</option>
+              <option value="WILSON">WILSON</option><option value="PEDRICK">PEDRICK</option>
+              <option value="KELLER">KELLER</option>
+            </select>
+          </div>
+          <div class="form-field full-width">
+            <label for="description">Description <span class="required">*</span></label>
+            <textarea id="description" name="description" placeholder="Describe the required work" maxlength="500" required></textarea>
+          </div>
+          <div class="form-field">
+            <label for="wopriority">WO Priority <span class="required">*</span></label>
+            <input id="wopriority" name="wopriority" type="number" min="1" step="1" placeholder="Example: 1" required>
+          </div>
+          <div class="form-field">
+            <label for="worktype">Work Type <span class="required">*</span></label>
+            <select id="worktype" name="worktype" required>
+              <option value="">Select work type</option>
+              <option value="ACTY">Activity</option><option value="CAL">Calibration</option>
+              <option value="CM">Corrective Maintenance</option><option value="EM">Emergency Maintenance</option>
+              <option value="EV">Event Report</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="failurecode">Failure Code <span class="required">*</span></label>
+            <select id="failurecode" name="failurecode" required>
+              <option value="">Select failure code</option>
+              <option value="PUMPS">Pump Failure</option><option value="HARDWARE">Hardware Failures</option>
+              <option value="MECH">Mechanical</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="reportedby">Reported By <span class="required">*</span></label>
+            <input id="reportedby" name="reportedby" value="REJA" maxlength="50" required>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button id="submitButton" class="primary-button" type="submit">Submit Work Order</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <div id="loadingOverlay" class="loading-overlay" hidden aria-live="polite" aria-busy="true">
+    <div class="loading-panel"><span class="spinner" aria-hidden="true"></span><span>Creating work order…</span></div>
+  </div>
+  <script src="work-order.js"></script>
+</body>
+</html>

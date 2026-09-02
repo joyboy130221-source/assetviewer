@@ -19,6 +19,12 @@ The value of `assetId` is safely inserted into the Maximo `oslc.where` filter. T
 
 The API key is intentionally kept in a server-side environment variable. Do not put it in `app.js`, because browser visitors could read it.
 
+## Create a work order
+
+Open `https://your-domain.vercel.app/work-order.html`, or click **Create Work Order** from the Asset Viewer. If opened from an asset page, the asset number is filled automatically.
+
+The form sends these original Maximo JSON attributes through the server-side `/api/work-order` endpoint: `siteid`, `orgid`, `assetnum`, `location`, `description`, `wopriority`, `worktype`, `failurecode`, and `reportedby`.
+
 ## Local development
 
 1. Install the Vercel CLI: `npm install -g vercel`
