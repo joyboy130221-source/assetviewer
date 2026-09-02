@@ -23,7 +23,9 @@ The API key is intentionally kept in a server-side environment variable. Do not 
 
 Open `https://your-domain.vercel.app/work-order.html`, or click **Create Work Order** from the Asset Viewer. If opened from an asset page, the asset number is filled automatically.
 
-The form sends these original Maximo JSON attributes through the server-side `/api/work-order` endpoint: `siteid`, `orgid`, `assetnum`, `location`, `description`, `wopriority`, `worktype`, `failurecode`, and `reportedby`.
+The form sends these original Maximo JSON attributes through the server-side `/api/work-order` endpoint: `siteid`, `orgid`, `assetnum`, `location`, `description`, `wopriority`, `worktype`, `failurecode`, `reportedby`, and `reportdate`.
+
+`reportdate` is selected with a date-time picker and converted to Maximo's `yyyy-MM-dd'T'HH:mm:ssXXX` format using the user's browser time-zone offset, for example `2026-09-03T08:00:00+07:00`.
 
 ## Local development
 

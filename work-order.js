@@ -5,10 +5,33 @@ const submitButton = document.querySelector('#submitButton');
 const params = new URLSearchParams(window.location.search);
 const initialAssetId = (params.get('assetId') || '').trim();
 
+function pad(number) {
+  return String(number).padStart(2, '0');
+}
+
+function setDefaultReportDate() {
+  const now = new Date();
+  form.elements.reportdate.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    + `T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+function toMaximoDateTime(localDateTime) {
+  const match = localDateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) throw new Error('Report Date has an invalid date and time.');
+  const [, year, month, day, hour, minute, second = '00'] = match;
+  const selectedDate = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+  const offsetMinutes = -selectedDate.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const absoluteOffset = Math.abs(offsetMinutes);
+  const offset = `${sign}${pad(Math.floor(absoluteOffset / 60))}:${pad(absoluteOffset % 60)}`;
+  return `${year}-${month}-${day}T${hour}:${minute}:${second}${offset}`;
+}
+
 if (initialAssetId) {
   form.elements.assetnum.value = initialAssetId;
   document.querySelector('#backToAsset').href = `index.html?assetId=${encodeURIComponent(initialAssetId)}`;
 }
+setDefaultReportDate();
 
 function showMessage(text, type) {
   message.textContent = text;
@@ -35,6 +58,12 @@ form.addEventListener('submit', async event => {
   }
 
   const body = Object.fromEntries(new FormData(form).entries());
+  try {
+    body.reportdate = toMaximoDateTime(body.reportdate);
+  } catch (error) {
+    showMessage(error.message, 'error');
+    return;
+  }
   if (!window.confirm(`Create a work order for asset ${body.assetnum}?`)) return;
 
   loading.hidden = false;

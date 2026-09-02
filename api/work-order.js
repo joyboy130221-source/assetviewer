@@ -1,5 +1,5 @@
 const MAXIMO_WORK_ORDER_URL = 'https://masdemo.manage.maslab.apps.apacdm.am.co-demo.com/maximo/api/os/mxapiwo';
-const REQUIRED_FIELDS = ['siteid', 'orgid', 'assetnum', 'location', 'description', 'wopriority', 'worktype', 'failurecode', 'reportedby'];
+const REQUIRED_FIELDS = ['siteid', 'orgid', 'assetnum', 'location', 'description', 'wopriority', 'worktype', 'failurecode', 'reportedby', 'reportdate'];
 const ALLOWED_LOCATIONS = new Set(['UPS', 'DHL', 'WILSON', 'PEDRICK', 'KELLER']);
 const ALLOWED_WORK_TYPES = new Set(['ACTY', 'CAL', 'CM', 'EM', 'EV']);
 const ALLOWED_FAILURE_CODES = new Set(['PUMPS', 'HARDWARE', 'MECH']);
@@ -26,6 +26,9 @@ module.exports = async function handler(request, response) {
   if (!ALLOWED_WORK_TYPES.has(payload.worktype)) return response.status(400).json({ error: 'Invalid work type' });
   if (!ALLOWED_FAILURE_CODES.has(payload.failurecode)) return response.status(400).json({ error: 'Invalid failure code' });
   if (!/^\d+$/.test(payload.wopriority)) return response.status(400).json({ error: 'WO priority must be a whole number' });
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/.test(payload.reportdate)) {
+    return response.status(400).json({ error: 'Report Date must use yyyy-MM-ddTHH:mm:ssXXX format' });
+  }
   payload.wopriority = Number(payload.wopriority);
 
   const url = new URL(MAXIMO_WORK_ORDER_URL);
