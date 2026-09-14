@@ -39,3 +39,37 @@ The form sends these original Maximo JSON attributes through the server-side `/a
 - The Maximo site is fixed to `BEDFORD` in `api/asset.js`.
 - The included response header allows the page to be embedded in an iframe.
 - Whether the Vercel server can call Maximo depends on the Maximo endpoint being reachable from the public internet and accepting the configured key.
+
+## Update Work Order status and Worklog
+
+Open the new page with a work order number:
+
+`https://your-domain.vercel.app/work-order-update.html?wonum=1234`
+
+Optional site parameter:
+
+`https://your-domain.vercel.app/work-order-update.html?wonum=1234&siteid=BEDFORD`
+
+The page:
+
+- Retrieves the work order header from `MXAPIWO`.
+- Supports these status values: `WAPPR`, `APPR`, `WSCH`, `WMATL`, `INPRG`, `COMP`, `CLOSE`, and `CAN`.
+- Retrieves, creates, and updates worklogs through `MXAPIWORKLOG`.
+- Supports `APPTNOTE`, `CLIENTNOTE`, `UPDATE`, and `WORK` log types.
+- Allows multiple worklog rows to be staged and submitted together.
+- Saves every unsent status/memo/worklog edit in browser `localStorage`, scoped by site + work order number.
+- Clears the browser draft after a fully successful submission.
+- Shows a confirmation dialog before submission, a blocking loading overlay while waiting for Maximo, and Maximo error text when a request fails.
+
+### Serverless endpoints
+
+- `GET /api/work-order-detail?wonum=...&siteid=BEDFORD`
+- `GET /api/worklogs?wonum=...&siteid=BEDFORD`
+- `POST /api/worklogs` for individual create/update operations
+- `POST /api/work-order-update` for the page's combined status + multi-worklog submission
+
+`api/_maximo.js` centralizes the Maximo root URL and API authentication. You can override the default Maximo API root with an optional Vercel environment variable named `MAXIMO_ROOT` (for example `https://host/maximo/api`).
+
+### Important Maximo configuration note
+
+Maximo REST object structures are configurable. This implementation uses the standard `MXAPIWO` and `MXAPIWORKLOG` names. If your environment renamed, restricted, or customized those object structures/relationships, update the names or selected attributes in the corresponding files under `/api`.

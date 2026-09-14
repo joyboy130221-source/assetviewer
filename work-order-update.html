@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Update Work Order</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">MAXIMO WORK ORDER</p>
+        <h1>Update Work Order</h1>
+        <p id="pageSubtitle" class="subtitle">Load a work order by using ?wonum=1234</p>
+      </div>
+      <div class="header-actions">
+        <button id="refreshButton" class="secondary-button" type="button">Refresh</button>
+        <a class="secondary-button" href="index.html">Asset Viewer</a>
+      </div>
+    </header>
+
+    <section id="message" class="form-message" hidden role="alert"></section>
+    <section id="loadingState" class="state-card">
+      <span class="spinner" aria-hidden="true"></span>
+      <div><h2>Loading Work Order</h2><p>Retrieving work order and worklog information from Maximo.</p></div>
+    </section>
+    <section id="errorState" class="state-card error" hidden>
+      <h2>Unable to load work order</h2><p id="errorMessage"></p>
+    </section>
+
+    <div id="content" class="detail-layout" hidden>
+      <section class="section-card">
+        <div class="section-heading">
+          <div><h2>Work Order Detail</h2><p>Header information retrieved from Maximo.</p></div>
+          <span id="currentStatusBadge" class="status-badge">—</span>
+        </div>
+        <div id="detailGrid" class="detail-grid"></div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <div><h2>Change Status</h2><p>Select the new work order status to submit to Maximo.</p></div>
+          <span id="draftBadge" class="draft-badge" hidden>Draft saved in browser</span>
+        </div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="status">New Status</label>
+            <select id="status" name="status">
+              <option value="">Keep current status</option>
+              <option value="WAPPR">WAPPR — Waiting on Approval</option>
+              <option value="APPR">APPR — Approved</option>
+              <option value="WSCH">WSCH — Waiting to be Scheduled</option>
+              <option value="WMATL">WMATL — Waiting on Material</option>
+              <option value="INPRG">INPRG — In Progress</option>
+              <option value="COMP">COMP — Completed</option>
+              <option value="CLOSE">CLOSE — Closed</option>
+              <option value="CAN">CAN — Canceled</option>
+            </select>
+            <p id="statusHelp" class="status-help">No status change selected.</p>
+          </div>
+          <div class="form-field">
+            <label for="statusMemo">Status Change Memo</label>
+            <textarea id="statusMemo" maxlength="500" placeholder="Optional note explaining the status change"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-card">
+        <div class="section-heading">
+          <div><h2>Maximo Worklog</h2><p>Review existing worklogs, edit them, or stage multiple new worklog rows.</p></div>
+          <button id="addWorklogButton" class="primary-button" type="button">+ Add Worklog</button>
+        </div>
+        <div class="table-wrap">
+          <table class="worklog-table">
+            <thead><tr><th>Log Type</th><th>Summary</th><th>Worklog Detail</th><th>Information</th><th>Action</th></tr></thead>
+            <tbody id="worklogRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="sticky-submit">
+        <p id="changeSummary">Changes are automatically saved locally in this browser until submitted.</p>
+        <div class="inline-actions">
+          <button id="clearDraftButton" class="secondary-button danger" type="button">Clear Draft</button>
+          <button id="submitButton" class="primary-button" type="button">Submit Changes</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="loadingOverlay" class="loading-overlay" hidden aria-live="polite" aria-busy="true">
+    <div class="loading-panel"><span class="spinner" aria-hidden="true"></span><span id="loadingText">Submitting changes to Maximo…</span></div>
+  </div>
+  <script src="work-order-update.js"></script>
+</body>
+</html>
