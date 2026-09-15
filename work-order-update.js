@@ -39,10 +39,9 @@ function apiError(body, status) {
   const maximo = body?.maximoResponse?.Error || body?.maximoResponse?.['oslc:Error'] || body?.Error || body?.['oslc:Error'] || {};
   const message = body?.message || body?.error || maximo?.message || maximo?.['oslc:message'] || `API request failed (${status}).`;
   const reasonCode = body?.reasonCode || maximo?.reasonCode || maximo?.['spi:reasonCode'];
-  return reasonCode ? `${reasonCode} - ${String(message).replace(new RegExp(`^${reasonCode}\\s*-?\\s*`, 'i'), '')}` : message;
-}
-function loadDraft() {
-  try { const stored = JSON.parse(localStorage.getItem(cacheKey)); if (stored && typeof stored === 'object') draft = { status: '', memo: '', worklogs: {}, ...stored }; } catch { /* ignore invalid browser cache */ }
+  if (!reasonCode) return message;
+  const cleanMessage = String(message).replace(new RegExp(`^${reasonCode}\s*-?\s*`, 'i'), '');
+  return `${reasonCode} - ${cleanMessage}`;
 }
 function saveDraft() {
   localStorage.setItem(cacheKey, JSON.stringify(draft));
