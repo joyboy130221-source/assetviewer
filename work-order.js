@@ -3,6 +3,7 @@ const message = document.querySelector('#formMessage');
 const loading = document.querySelector('#loadingOverlay');
 const submitButton = document.querySelector('#submitButton');
 const params = new URLSearchParams(window.location.search);
+const envName = (params.get('env') || '').trim();
 const initialAssetId = (params.get('assetId') || '').trim();
 
 function pad(number) {
@@ -29,7 +30,7 @@ function toMaximoDateTime(localDateTime) {
 
 if (initialAssetId) {
   form.elements.assetnum.value = initialAssetId;
-  document.querySelector('#backToAsset').href = `index.html?assetId=${encodeURIComponent(initialAssetId)}`;
+  document.querySelector('#backToAsset').href = `index.html?env=${encodeURIComponent(envName)}&assetId=${encodeURIComponent(initialAssetId)}`;
 }
 setDefaultReportDate();
 
@@ -58,13 +59,15 @@ form.addEventListener('submit', async event => {
   }
 
   const body = Object.fromEntries(new FormData(form).entries());
+  if (!envName) { showMessage('Missing env parameter. Open this page using ?env=demo-coh&assetId=V6-0401', 'error'); return; }
+  body.env = envName;
   try {
     body.reportdate = toMaximoDateTime(body.reportdate);
   } catch (error) {
     showMessage(error.message, 'error');
     return;
   }
-  if (!window.confirm(`Create a work order for asset ${body.assetnum}?`)) return;
+  if (!await AppUI.confirmAction({ title: 'Create work order?', message: `Create a work order for asset ${body.assetnum} in environment ${envName}?`, confirmText: 'Create Work Order' })) return;
 
   loading.hidden = false;
   submitButton.disabled = true;
@@ -82,9 +85,7 @@ form.addEventListener('submit', async event => {
       if (field.name && field.type !== 'submit') field.value = '';
     });
     showMessage(responseBody.message || 'Work order created successfully.', 'success');
-    window.alert(responseBody.wonum
-      ? `Work order ${responseBody.wonum} was created successfully.`
-      : 'Work order was created successfully.');
+    AppUI.toast(responseBody.wonum ? `Work order ${responseBody.wonum} was created successfully.` : 'Work order was created successfully.');
   } catch (error) {
     showMessage(error.message || 'Unable to create the work order.', 'error');
   } finally {

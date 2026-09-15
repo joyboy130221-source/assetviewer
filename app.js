@@ -16,8 +16,9 @@ let currentAsset = null;
 let editMode = false;
 let draftValues = {};
 const query = new URLSearchParams(window.location.search);
+const envName = (query.get('env') || '').trim();
 const assetId = (query.get('assetId') || '').trim();
-if (assetId) document.querySelector('#createWorkOrderLink').href = `work-order.html?assetId=${encodeURIComponent(assetId)}`;
+if (assetId) document.querySelector('#createWorkOrderLink').href = `work-order.html?env=${encodeURIComponent(envName)}&assetId=${encodeURIComponent(assetId)}`;
 
 const FRIENDLY_NAMES = {
   assetnum: 'Asset Number', assetid: 'Asset ID', description: 'Description', siteid: 'Site', orgid: 'Organization',
@@ -143,19 +144,19 @@ function buildChanges() {
 async function submitChanges() {
   const changes = buildChanges();
   if (!Object.keys(changes).length) { showMessage('No attributes have been changed.', 'error-message'); return; }
-  if (!window.confirm(`Submit ${Object.keys(changes).length} changed attribute(s) for asset ${assetId}?`)) return;
+  if (!await AppUI.confirmAction({ title: 'Submit asset changes?', message: `Update ${Object.keys(changes).length} attribute(s) for asset ${assetId} in environment ${envName}?`, confirmText: 'Submit Changes' })) return;
   elements.loadingOverlay.hidden = false; elements.submitButton.disabled = true; elements.cancelEditButton.disabled = true;
   try {
-    const response = await fetch('/api/asset', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ assetId, attributes: changes }) });
+    const response = await fetch('/api/asset', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ env: envName, assetId, attributes: changes }) });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || body.detail || `Request failed (${response.status})`);
     // Clear the edit form immediately, then reload authoritative values from Maximo.
     draftValues = {}; setEditUi(false); renderAttributes();
     await loadAsset({ preserveMessage: true });
     showMessage(body.message || 'Asset attributes saved successfully.', 'success-message');
-    window.alert(body.message || 'Asset attributes saved successfully.');
+    AppUI.toast(body.message || 'Asset attributes saved successfully.');
   } catch (error) {
-    showMessage(error.message, 'error-message'); window.alert(`Save failed: ${error.message}`);
+    showMessage(error.message, 'error-message'); AppUI.toast(`Save failed: ${error.message}`, 'error');
   } finally {
     elements.loadingOverlay.hidden = true; elements.submitButton.disabled = false; elements.cancelEditButton.disabled = false;
   }
@@ -165,10 +166,11 @@ function showMessage(text, className) { elements.formMessage.className = `form-m
 async function loadAsset(options = {}) {
   elements.loading.hidden = false; elements.error.hidden = true; elements.empty.hidden = true; elements.content.hidden = true;
   elements.attributeSearch.value = ''; if (!options.preserveMessage) elements.formMessage.hidden = true;
+  if (!envName) { elements.loading.hidden=true; elements.error.hidden=false; elements.errorMessage.textContent='Missing env parameter. Example: ?env=demo-coh&assetId=V6-0404'; elements.requestSummary.textContent='No Maximo environment was supplied.'; return; }
   if (!assetId) { elements.loading.hidden=true; elements.error.hidden=false; elements.errorMessage.textContent='Missing query parameter. Open this page using ?assetId=V6-0404'; elements.requestSummary.textContent='No asset ID was supplied.'; return; }
-  elements.requestSummary.textContent = `Current Asset ID is ${assetId}`;
+  elements.requestSummary.textContent = `Environment ${envName} • Current Asset ID is ${assetId}`;
   try {
-    const response = await fetch(`/api/asset?assetId=${encodeURIComponent(assetId)}`, { cache:'no-store' }); const body=await response.json().catch(()=>({}));
+    const response = await fetch(`/api/asset?env=${encodeURIComponent(envName)}&assetId=${encodeURIComponent(assetId)}`, { cache:'no-store' }); const body=await response.json().catch(()=>({}));
     if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); const asset=Array.isArray(body.member)?body.member[0]:null;
     elements.loading.hidden=true; if (!asset) { elements.empty.hidden=false; return; } renderAsset(asset);
   } catch (error) { elements.loading.hidden=true; elements.error.hidden=false; elements.errorMessage.textContent=error.message; }

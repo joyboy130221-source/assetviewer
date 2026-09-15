@@ -1,81 +1,106 @@
-# Maximo Asset Viewer
+# Maximo Asset Viewer v3 — Multi Environment + Administration
 
-Open the deployed page with an asset query parameter:
+This version removes the hard-coded Maximo host/API key from the Maximo feature APIs. Maximo environments are stored in PostgreSQL and selected with the `env` URL parameter.
 
-`https://assetviewer.vercel.app/?assetId=V6-0404`
+## Required Vercel configuration
 
-The value of `assetId` is safely inserted into the Maximo `oslc.where` filter. The response is read from `member[0]`; the page shows a summary and every attribute returned by the API.
+Connect a PostgreSQL provider to the Vercel project (for example Neon, Supabase, Prisma Postgres, or another provider that supplies a PostgreSQL `DATABASE_URL`). Then configure these Vercel environment variables:
 
-## Deploy to Vercel
+- `DATABASE_URL` — PostgreSQL connection string supplied by the database integration.
+- `SESSION_SECRET` — a long random value used to sign administration login sessions.
+- `CREDENTIAL_ENCRYPTION_KEY` — a long random value used to AES-256-GCM encrypt Maximo API keys before they are stored in PostgreSQL.
 
-1. Extract this ZIP and open the `assetviewer` folder.
-2. Import the folder/repository into Vercel, or run `npx vercel`.
-3. In **Vercel → Project Settings → Environment Variables**, create:
-   - Name: `MAXIMO_API_KEY`
-   - Value: your Maximo API key
-   - Environments: Production, Preview, and Development as needed
-4. Redeploy after adding the environment variable.
-5. Test: `https://your-domain.vercel.app/?assetId=V6-0404`
+`MAXIMO_API_KEY` and `MAXIMO_ROOT` are no longer required for normal Maximo calls. Credentials are resolved from `maximo_environments` using the `env` parameter.
 
-The API key is intentionally kept in a server-side environment variable. Do not put it in `app.js`, because browser visitors could read it.
+> Keep `CREDENTIAL_ENCRYPTION_KEY` stable. Changing/removing it will make previously encrypted Maximo API keys unreadable.
 
-## Create a work order
+## First startup / default administrator
 
-Open `https://your-domain.vercel.app/work-order.html`, or click **Create Work Order** from the Asset Viewer. If opened from an asset page, the asset number is filled automatically.
+The schema is created automatically on the first database-backed request. If role/user records are empty, the application bootstraps:
 
-The form sends these original Maximo JSON attributes through the server-side `/api/work-order` endpoint: `siteid`, `orgid`, `assetnum`, `location`, `description`, `wopriority`, `worktype`, `failurecode`, `reportedby`, and `reportdate`.
+- Username: `admin`
+- Password: `Gomake1t!@#123`
+- Role: `administrator`
+- Enabled administration pages: Role Page, User Page, Maximo API Endpoint Page
 
-`reportdate` is selected with a date-time picker and converted to Maximo's `yyyy-MM-dd'T'HH:mm:ssXXX` format using the user's browser time-zone offset, for example `2026-09-03T08:00:00+07:00`.
+Change the default password after first login.
+
+Administration login: `/login.html`
+
+## Maximo Environment Configuration
+
+Open `/maximo-environments.html` after login. Each record contains:
+
+- Environment Name (`env_name`) — URL key, e.g. `demo-coh`
+- Description
+- Maximo API Endpoint — e.g. `https://host/maximo/api`
+- API Key (encrypted in PostgreSQL)
+- Active
+
+Example records:
+
+- `demo-coh` → `https://demomaximocoh/maximo/api`
+- `demo-dubai` → `https://demomaximodubai/maximo/api`
+
+The application always resolves the endpoint/API key from the environment whose **Environment Name exactly matches `env`**.
+
+## Public Maximo pages
+
+These remain unauthenticated as requested, but now require `env`:
+
+- Asset Viewer: `/?env=demo-coh&assetId=V6-0401`
+- Asset Viewer (Dubai): `/?env=demo-dubai&assetId=V6-0401`
+- Create Work Order: `/work-order.html?env=demo-coh&assetId=V6-0401`
+- Update Work Order: `/work-order-update.html?env=demo-coh&wonum=1330`
+
+The `env` value is forwarded only to the server-side API. The browser never receives the stored Maximo API key.
+
+## Administration and permissions
+
+Only these pages require login:
+
+- `/roles.html`
+- `/users.html`
+- `/maximo-environments.html`
+
+Role permissions are stored as JSON so another protected administration page can be added later without redesigning the role/user tables. Current permission keys are `roles`, `users`, and `maximoEnvironments`.
+
+Users contain Username, Full Name, Email Address, Password, Active, and Role. Login accepts Username or Email.
+
+## Confirmation / loading UX
+
+Native browser `confirm()` / `alert()` calls were replaced with the shared `ui.js` modal/toast implementation. Create, update, delete, asset update, work-order create, work-order update, and clear-draft actions use the custom confirmation UI. Blocking loading overlays are shown while server/API calls are running.
+
+## Database tables
+
+The application creates:
+
+- `app_roles`
+- `app_users`
+- `maximo_environments`
+
+Passwords are stored as salted scrypt hashes. Maximo API keys are encrypted with AES-256-GCM using `CREDENTIAL_ENCRYPTION_KEY`.
 
 ## Local development
 
-1. Install the Vercel CLI: `npm install -g vercel`
-2. Create `.env.local` containing `MAXIMO_API_KEY=your_key_here`
-3. Run `vercel dev`
-4. Visit `http://localhost:3000/?assetId=V6-0404`
+Create `.env.local`:
+
+```
+DATABASE_URL=postgresql://...
+SESSION_SECRET=replace-with-a-long-random-secret
+CREDENTIAL_ENCRYPTION_KEY=replace-with-a-long-random-encryption-secret
+```
+
+Then run:
+
+```
+npm install
+npx vercel dev
+```
 
 ## Notes
 
-- The Maximo site is fixed to `BEDFORD` in `api/asset.js`.
-- The included response header allows the page to be embedded in an iframe.
-- Whether the Vercel server can call Maximo depends on the Maximo endpoint being reachable from the public internet and accepting the configured key.
-
-## Update Work Order status and Worklog
-
-Open the new page with a work order number:
-
-`https://your-domain.vercel.app/work-order-update.html?wonum=1234`
-
-Optional site parameter:
-
-`https://your-domain.vercel.app/work-order-update.html?wonum=1234&siteid=BEDFORD`
-
-The page:
-
-- Retrieves the work order header from `MXAPIWO`.
-- Supports these status values: `WAPPR`, `APPR`, `WSCH`, `WMATL`, `INPRG`, `COMP`, `CLOSE`, and `CAN`.
-- Retrieves, creates, and updates worklogs through `MXAPIWORKLOG`.
-- Supports `APPTNOTE`, `CLIENTNOTE`, `UPDATE`, and `WORK` log types.
-- Allows multiple worklog rows to be staged and submitted together.
-- Saves every unsent status/memo/worklog edit in browser `localStorage`, scoped by site + work order number.
-- Clears the browser draft after a fully successful submission.
-- Shows a confirmation dialog before submission, a blocking loading overlay while waiting for Maximo, and Maximo error text when a request fails.
-
-### Serverless endpoints
-
-- `GET /api/work-order-detail?wonum=...&siteid=BEDFORD`
-- `GET /api/worklogs?wonum=...&siteid=BEDFORD`
-- `POST /api/worklogs` for individual create/update operations
-- `POST /api/work-order-update` for the page's combined status + multi-worklog submission
-
-`api/_maximo.js` centralizes the Maximo root URL and API authentication. You can override the default Maximo API root with an optional Vercel environment variable named `MAXIMO_ROOT` (for example `https://host/maximo/api`).
-
-### Important Maximo configuration note
-
-Maximo REST object structures are configurable. This implementation uses the standard `MXAPIWO` and `MXAPIWORKLOG` names. If your environment renamed, restricted, or customized those object structures/relationships, update the names or selected attributes in the corresponding files under `/api`.
-
-## Edit asset attributes
-
-The Asset Viewer now includes an **Edit** button in the **All attributes** section. Primitive attributes are rendered as friendly form controls: dates use a date picker, text uses a text box, numbers use numeric input, and booleans use Yes/No. Maximo identity/system fields such as `assetnum`, `assetid`, `siteid`, `orgid`, `href`, and `_rowstamp` remain read-only to avoid changing the resource identity.
-
-Only changed attributes are submitted. The browser sends `POST /api/asset` with `{ assetId, attributes }`; the server keeps the API key private, locates the Maximo asset resource, and performs the Maximo update using POST with `x-method-override: PATCH` and `patchtype: MERGE`. The page asks for confirmation, shows a blocking loading overlay, displays Maximo error messages, reloads the saved record, and returns the form to read-only mode after success.
+- The current site ID used by the Asset Viewer remains `BEDFORD`, matching the existing application behavior.
+- Maximo object structures remain `mxasset`, `mxapiwo`, and `mxapiworklog`.
+- Administration HTML is static, but protected data/actions are server-side authenticated and permission checked. Protected pages immediately redirect to login when there is no valid session.
+- The existing `frame-ancestors *` policy is retained so the public External View pages can still be embedded in an iframe.

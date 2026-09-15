@@ -10,9 +10,11 @@ const STATUS_INFO = {
 };
 const LOG_TYPES = { APPTNOTE: 'Appointment Note', CLIENTNOTE: 'Client Note', UPDATE: 'Update', WORK: 'Work' };
 const params = new URLSearchParams(window.location.search);
+const envName = (params.get('env') || '').trim();
 const wonum = (params.get('wonum') || params.get('workOrderNumber') || '').trim();
 const siteid = (params.get('siteid') || 'BEDFORD').trim();
-const cacheKey = `maximo-work-order-draft:${siteid}:${wonum}`;
+const cacheKey = `maximo-work-order-draft:${envName}:${siteid}:${wonum}`;
+const assetViewerLink = document.querySelector('a[href="index.html"]'); if (assetViewerLink && envName) assetViewerLink.href = `index.html?env=${encodeURIComponent(envName)}`;
 
 const el = {
   content: document.querySelector('#content'), loadingState: document.querySelector('#loadingState'), errorState: document.querySelector('#errorState'),
@@ -105,11 +107,12 @@ function addNewWorklog() {
 async function fetchJson(url, options) { const response = await fetch(url, options); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(apiError(body, response.status)); return body; }
 async function loadAll({ keepMessage = false } = {}) {
   if (!keepMessage) hideMessage(); el.content.hidden = true; el.errorState.hidden = true; el.loadingState.hidden = false;
+  if (!envName) { el.loadingState.hidden=true; el.errorState.hidden=false; el.errorMessage.textContent='Missing env parameter. Example: work-order-update.html?env=demo-coh&wonum=1234'; return; }
   if (!wonum) { el.loadingState.hidden = true; el.errorState.hidden = false; el.errorMessage.textContent = 'Missing work order number. Open this page using work-order-update.html?wonum=1234'; return; }
   try {
     const [woBody, logsBody] = await Promise.all([
-      fetchJson(`/api/work-order-detail?wonum=${encodeURIComponent(wonum)}&siteid=${encodeURIComponent(siteid)}`, { cache: 'no-store' }),
-      fetchJson(`/api/worklogs?wonum=${encodeURIComponent(wonum)}&siteid=${encodeURIComponent(siteid)}`, { cache: 'no-store' })
+      fetchJson(`/api/work-order-detail?env=${encodeURIComponent(envName)}&wonum=${encodeURIComponent(wonum)}&siteid=${encodeURIComponent(siteid)}`, { cache: 'no-store' }),
+      fetchJson(`/api/worklogs?env=${encodeURIComponent(envName)}&wonum=${encodeURIComponent(wonum)}&siteid=${encodeURIComponent(siteid)}`, { cache: 'no-store' })
     ]);
     workOrder = woBody.data; serverWorklogs = logsBody.data || []; renderHeader();
     el.status.value = draft.status || ''; el.statusMemo.value = draft.memo || ''; setStatusHelp(); renderWorklogs(); updateSummary(); el.draftBadge.hidden = !hasDraft();
@@ -130,13 +133,13 @@ async function submitChanges() {
   hideMessage(); const validation = validateChanges(); if (validation) { showMessage(validation, 'error'); return; }
   const changedLogs = Object.values(draft.worklogs || {}).map(normalizeItem);
   const description = `${draft.status ? `change status to ${draft.status}` : 'keep the current status'} and submit ${changedLogs.length} worklog change${changedLogs.length === 1 ? '' : 's'}`;
-  if (!window.confirm(`Submit Work Order ${wonum}?\n\nThis will ${description}.`)) return;
+  if (!await AppUI.confirmAction({ title: `Submit Work Order ${wonum}?`, message: `Environment ${envName}. This will ${description}.`, confirmText: 'Submit Changes' })) return;
   el.loadingText.textContent = 'Submitting work order and worklog changes to Maximo…'; el.loadingOverlay.hidden = false; el.submitButton.disabled = true;
   try {
-    const response = await fetch('/api/work-order-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wonum, siteid, status: draft.status, memo: draft.memo, worklogs: changedLogs }) });
+    const response = await fetch('/api/work-order-update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ env: envName, wonum, siteid, status: draft.status, memo: draft.memo, worklogs: changedLogs }) });
     const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(apiError(body, response.status));
     clearDraft(); el.status.value = ''; el.statusMemo.value = ''; await loadAll({ keepMessage: true });
-    showMessage(body.message || 'Work order changes submitted successfully.', 'success'); window.alert('Work order changes were submitted successfully.');
+    showMessage(body.message || 'Work order changes submitted successfully.', 'success'); AppUI.toast('Work order changes were submitted successfully.');
   } catch (error) { showMessage(error.message || 'Unable to submit work order changes.', 'error'); }
   finally { el.loadingOverlay.hidden = true; el.submitButton.disabled = false; }
 }
@@ -146,5 +149,5 @@ el.statusMemo.addEventListener('input', () => { draft.memo = el.statusMemo.value
 el.addWorklogButton.addEventListener('click', addNewWorklog);
 el.submitButton.addEventListener('click', submitChanges);
 el.refreshButton.addEventListener('click', () => loadAll());
-el.clearDraftButton.addEventListener('click', () => { if (!hasDraft() || window.confirm('Clear all locally saved changes for this work order?')) { clearDraft(); el.status.value = ''; el.statusMemo.value = ''; setStatusHelp(); renderWorklogs(); updateSummary(); showMessage('Local draft cleared.', 'success'); } });
+el.clearDraftButton.addEventListener('click', async () => { if (!hasDraft() || await AppUI.confirmAction({title:'Clear local draft?',message:'Clear all locally saved changes for this work order?',confirmText:'Clear Draft',danger:true})) { clearDraft(); el.status.value = ''; el.statusMemo.value = ''; setStatusHelp(); renderWorklogs(); updateSummary(); showMessage('Local draft cleared.', 'success'); } });
 loadDraft(); loadAll();
