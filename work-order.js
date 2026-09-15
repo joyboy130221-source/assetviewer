@@ -42,11 +42,10 @@ function showMessage(text, type) {
 }
 
 function apiErrorMessage(body, status) {
-  return body?.['oslc:Error']?.['oslc:message']
-    || body?.error?.['oslc:message']
-    || body?.error
-    || body?.message
-    || `The API request failed with status ${status}.`;
+  const maximo = body?.maximoResponse?.Error || body?.maximoResponse?.['oslc:Error'] || body?.Error || body?.['oslc:Error'] || {};
+  const message = body?.message || body?.error || maximo?.message || maximo?.['oslc:message'] || `The API request failed with status ${status}.`;
+  const reasonCode = body?.reasonCode || maximo?.reasonCode || maximo?.['spi:reasonCode'];
+  return reasonCode ? `${reasonCode} - ${String(message).replace(new RegExp(`^${reasonCode}\\s*-?\\s*`, 'i'), '')}` : message;
 }
 
 form.addEventListener('submit', async event => {
