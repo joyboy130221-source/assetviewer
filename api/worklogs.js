@@ -8,6 +8,7 @@ const {
     getEnvironment
 } = require('../lib/maximo');
 
+
 const ALLOWED = new Set([
     'APPTNOTE',
     'CLIENTNOTE',
@@ -15,104 +16,140 @@ const ALLOWED = new Set([
     'WORK'
 ]);
 
+
 /**
- * Normalize a Maximo Work Order href so it always targets the
- * modifyworklog action.
- *
- * Some environments return:
- *   .../mxapiwo/{resource}/modifyworklog
- *
- * Other environments return:
- *   .../mxapiwo/{resource}
- *
- * This function supports both.
+ * Normalize and validate Worklog input.
  */
-function getModifyWorklogUrl(href) {
-    if (!href) {
-        throw Object.assign(
-            new Error('Maximo worklog href is required.'),
-            {
-                status: 500
-            }
-        );
-    }
-
-    const u = new URL(href);
-
-    // Remove trailing slash if it exists
-    const cleanPath = u.pathname.replace(/\/+$/, '');
-
-    // Add /modifyworklog only when Maximo did not already
-    // include it in the returned href.
-    if (!cleanPath.toLowerCase().endsWith('/modifyworklog')) {
-        u.pathname = `${cleanPath}/modifyworklog`;
-    }
-
-    u.searchParams.set('lean', '1');
-
-    return u;
-}
-
-function normalize(i) {
+function normalize(input) {
 
     const description =
-        String(i.description || '').trim();
+        String(input.description || '').trim();
 
-    const long =
-        String(i.description_longdescription || '').trim();
+    const longDescription =
+        String(
+            input.description_longdescription || ''
+        ).trim();
 
     const logtype =
-        String(i.logtype || '').trim().toUpperCase();
+        String(input.logtype || '')
+            .trim()
+            .toUpperCase();
+
 
     if (!description) {
+
         throw Object.assign(
-            new Error('Worklog description is required.'),
+            new Error(
+                'Worklog description is required.'
+            ),
             {
                 status: 400
             }
         );
     }
 
-    if (!long) {
+
+    if (!longDescription) {
+
         throw Object.assign(
-            new Error('Worklog long description is required.'),
+            new Error(
+                'Worklog long description is required.'
+            ),
             {
                 status: 400
             }
         );
     }
+
 
     if (!ALLOWED.has(logtype)) {
+
         throw Object.assign(
-            new Error('Invalid worklog log type.'),
+            new Error(
+                'Invalid worklog log type.'
+            ),
             {
                 status: 400
             }
         );
     }
+
 
     return {
         description,
-        description_longdescription: long,
+        description_longdescription:
+            longDescription,
         logtype
     };
 }
 
-async function listWorklogs(env, wonum, siteid) {
+
+/**
+ * =========================================================
+ * GET WORKLOG LIST
+ * =========================================================
+ *
+ * Retrieve Worklogs belonging to a Work Order.
+ *
+ * Example:
+ *
+ * GET /maximo/api/os/mxapiworklog
+ *      ?lean=1
+ *      &oslc.where=recordkey="1344"
+ *          and class="WORKORDER"
+ *          and siteid="BEDFORD"
+ */
+async function listWorklogs(
+    env,
+    wonum,
+    siteid
+) {
+
+    if (!wonum) {
+
+        throw Object.assign(
+            new Error(
+                'Work Order number is required.'
+            ),
+            {
+                status: 400
+            }
+        );
+    }
+
 
     const u = new URL(
-        objectStructureUrl(env, 'mxapiworklog')
+        objectStructureUrl(
+            env,
+            'mxapiworklog'
+        )
     );
 
-    u.searchParams.set('lean', '1');
+
+    u.searchParams.set(
+        'lean',
+        '1'
+    );
+
 
     u.searchParams.set(
         'oslc.select',
-        'worklogid,recordkey,class,siteid,' +
-        'description,description_longdescription,' +
-        'logtype,createby,createdate,' +
-        'modifyby,modifydate,href'
+        [
+            'worklogid',
+            'recordkey',
+            'class',
+            'siteid',
+            'description',
+            'description_longdescription',
+            'logtype',
+            'createby',
+            'createdate',
+            'modifyby',
+            'modifydate',
+            'href'
+        ].join(',')
     );
+
 
     u.searchParams.set(
         'oslc.where',
@@ -121,20 +158,49 @@ async function listWorklogs(env, wonum, siteid) {
         `and siteid="${escapeOslc(siteid)}"`
     );
 
+
     u.searchParams.set(
         'oslc.orderBy',
         '-createdate'
     );
 
+
     const {
         data
-    } = await maximoFetch(env, u);
+    } = await maximoFetch(
+        env,
+        u
+    );
 
-    return Array.isArray(data.member)
+
+    return Array.isArray(data?.member)
         ? data.member
         : [];
 }
 
+
+/**
+ * =========================================================
+ * CREATE WORKLOG
+ * =========================================================
+ *
+ * Create a new Worklog using MXAPIWORKLOG.
+ *
+ * POST:
+ *
+ * /maximo/api/os/mxapiworklog?lean=1
+ *
+ * Body:
+ *
+ * {
+ *     "recordkey": "1344",
+ *     "class": "WORKORDER",
+ *     "siteid": "BEDFORD",
+ *     "description": "Work started",
+ *     "description_longdescription": "...",
+ *     "logtype": "WORK"
+ * }
+ */
 async function createWorklog(
     env,
     wonum,
@@ -142,42 +208,114 @@ async function createWorklog(
     input
 ) {
 
+    if (!wonum) {
+
+        throw Object.assign(
+            new Error(
+                'Work Order number is required.'
+            ),
+            {
+                status: 400
+            }
+        );
+    }
+
+
+    if (!siteid) {
+
+        throw Object.assign(
+            new Error(
+                'Site ID is required.'
+            ),
+            {
+                status: 400
+            }
+        );
+    }
+
+
+    const normalized =
+        normalize(input);
+
+
     const u = new URL(
-        objectStructureUrl(env, 'mxapiworklog')
+        objectStructureUrl(
+            env,
+            'mxapiworklog'
+        )
     );
+
 
     u.searchParams.set(
         'lean',
         '1'
     );
 
-    return (
-        await maximoFetch(
-            env,
-            u,
-            {
-                method: 'POST',
 
-                body: JSON.stringify({
-                    recordkey: wonum,
-                    class: 'WORKORDER',
-                    siteid,
-                    ...normalize(input)
-                })
-            }
-        )
-    ).data;
+    const payload = {
+
+        /*
+         * Worklog Owner
+         */
+        recordkey: wonum,
+        class: 'WORKORDER',
+        siteid,
+
+        /*
+         * Worklog data
+         */
+        ...normalized
+    };
+
+
+    const {
+        data
+    } = await maximoFetch(
+        env,
+        u,
+        {
+            method: 'POST',
+
+            body:
+                JSON.stringify(
+                    payload
+                )
+        }
+    );
+
+
+    return data;
 }
 
-async function updateWorklog(
+
+/**
+ * =========================================================
+ * FIND WORKLOG
+ * =========================================================
+ *
+ * Retrieve the Worklog resource first.
+ *
+ * This is important because Maximo returns the actual
+ * resource URL inside "href".
+ *
+ * Example:
+ *
+ * {
+ *     "worklogid": 123,
+ *     "href":
+ *       "https://server/maximo/api/os/mxapiworklog/_ABC123"
+ * }
+ */
+async function findWorklog(
     env,
-    id,
-    input
+    worklogid
 ) {
 
-    const n = Number(id);
+    const id =
+        Number(worklogid);
 
-    if (!Number.isFinite(n)) {
+
+    if (!Number.isFinite(id)) {
 
         throw Object.assign(
             new Error(
@@ -189,18 +327,30 @@ async function updateWorklog(
         );
     }
 
-    const item = await findSingle(
-        env,
-        'mxapiworklog',
-        `worklogid=${n}`,
-        'worklogid,href'
-    );
 
-    if (!item?.href) {
+    const item =
+        await findSingle(
+            env,
+            'mxapiworklog',
+            `worklogid=${id}`,
+            [
+                'worklogid',
+                'recordkey',
+                'class',
+                'siteid',
+                'description',
+                'description_longdescription',
+                'logtype',
+                'href'
+            ].join(',')
+        );
+
+
+    if (!item) {
 
         throw Object.assign(
             new Error(
-                `Worklog ${id} was not found.`
+                `Worklog ${worklogid} was not found.`
             ),
             {
                 status: 404
@@ -208,102 +358,230 @@ async function updateWorklog(
         );
     }
 
-    /*
-     * Different Maximo environments can return:
-     *
-     * Environment A:
-     *
-     * https://testmaximodemo1.com/
-     * maxrest/api/os/mxapiwo/
-     * _QkVERk9SRC8xMzQ0/modifyworklog
-     *
-     *
-     * Environment B:
-     *
-     * https://testmaximodemo2.com/
-     * maxrest/api/os/mxapiwo/
-     * _QkVERk9SRC8xMzQ0
-     *
-     *
-     * getModifyWorklogUrl()
-     * normalizes both formats.
-     */
 
-    const u = getModifyWorklogUrl(
-        item.href
-    );
+    if (!item.href) {
 
-    return (
-        await maximoFetch(
-            env,
-            u,
+        throw Object.assign(
+            new Error(
+                `Worklog ${worklogid} does not contain a Maximo href.`
+            ),
             {
-                method: 'POST',
-
-                headers: {
-                    'x-method-override': 'PATCH',
-                    patchtype: 'MERGE'
-                },
-
-                body: JSON.stringify(
-                    normalize(input)
-                )
+                status: 500
             }
-        )
-    ).data;
+        );
+    }
+
+
+    return item;
 }
 
+
+/**
+ * =========================================================
+ * UPDATE WORKLOG
+ * =========================================================
+ *
+ * IMPORTANT:
+ *
+ * Do NOT append:
+ *
+ *      /modifyworklog
+ *
+ * to the MXAPIWORKLOG href.
+ *
+ *
+ * Previous implementation:
+ *
+ * mxapiworklog/{resource}/modifyworklog
+ *
+ *
+ * New implementation:
+ *
+ * mxapiworklog/{resource}?lean=1
+ *
+ *
+ * Request:
+ *
+ * POST mxapiworklog/{resource}?lean=1
+ *
+ * Headers:
+ *
+ * x-method-override: PATCH
+ * patchtype: MERGE
+ *
+ *
+ * This updates the Worklog resource directly.
+ */
+async function updateWorklog(
+    env,
+    worklogid,
+    input
+) {
+
+    /*
+     * Step 1
+     *
+     * Find existing Worklog.
+     */
+    const item =
+        await findWorklog(
+            env,
+            worklogid
+        );
+
+
+    /*
+     * Step 2
+     *
+     * Validate / normalize new values.
+     */
+    const payload =
+        normalize(input);
+
+
+    /*
+     * Step 3
+     *
+     * Use the Worklog resource href
+     * returned directly by Maximo.
+     */
+    const u =
+        new URL(
+            item.href
+        );
+
+
+    /*
+     * Do NOT add:
+     *
+     * /modifyworklog
+     *
+     * We update MXAPIWORKLOG directly.
+     */
+    u.searchParams.set(
+        'lean',
+        '1'
+    );
+
+
+    /*
+     * Step 4
+     *
+     * PATCH the Worklog resource.
+     */
+    const {
+        data
+    } = await maximoFetch(
+        env,
+        u,
+        {
+            method: 'POST',
+
+            headers: {
+
+                /*
+                 * Maximo REST PATCH
+                 */
+                'x-method-override':
+                    'PATCH',
+
+                /*
+                 * Only update fields
+                 * included in payload.
+                 */
+                patchtype:
+                    'MERGE'
+            },
+
+            body:
+                JSON.stringify(
+                    payload
+                )
+        }
+    );
+
+
+    return data;
+}
+
+
+/**
+ * =========================================================
+ * API HANDLER
+ * =========================================================
+ */
 module.exports = async (
     req,
     res
 ) => {
 
-    const b = parseBody(req.body);
+    const body =
+        parseBody(
+            req.body
+        );
+
 
     const wonum =
         String(
             req.query.wonum ||
-            b.wonum ||
+            body.wonum ||
             ''
         ).trim();
+
 
     const siteid =
         String(
             req.query.siteid ||
-            b.siteid ||
+            body.siteid ||
             'BEDFORD'
         ).trim();
 
+
     try {
 
+        /*
+         * Get Maximo environment.
+         */
         const env =
             await getEnvironment(
                 req.query.env ||
-                b.env
+                body.env
             );
 
-        /*
+
+        /**
+         * =================================================
          * GET
+         * =================================================
          *
-         * Retrieve Worklogs
+         * Retrieve Worklogs.
          */
-        if (req.method === 'GET') {
+        if (
+            req.method === 'GET'
+        ) {
+
+            const data =
+                await listWorklogs(
+                    env,
+                    wonum,
+                    siteid
+                );
+
 
             return res.json({
-                data:
-                    await listWorklogs(
-                        env,
-                        wonum,
-                        siteid
-                    )
+                data
             });
         }
 
-        /*
-         * Only POST is supported for
-         * Create / Update operation.
+
+        /**
+         * =================================================
+         * POST ONLY
+         * =================================================
          */
-        if (req.method !== 'POST') {
+        if (
+            req.method !== 'POST'
+        ) {
 
             return res
                 .status(405)
@@ -313,49 +591,114 @@ module.exports = async (
                 });
         }
 
-        /*
-         * operation = update
-         *      -> Update Worklog
+
+        /**
+         * =================================================
+         * OPERATION
+         * =================================================
          *
-         * otherwise
-         *      -> Create Worklog
+         * operation = update
+         *
+         *      Update existing Worklog
+         *
+         *
+         * operation = create
+         *
+         *      Create new Worklog
          */
 
-        const data =
+
+        const operation =
             String(
-                b.operation ||
+                body.operation ||
                 'create'
-            ).toLowerCase() === 'update'
+            )
+                .trim()
+                .toLowerCase();
 
-                ? await updateWorklog(
+
+        let data;
+
+
+        /**
+         * UPDATE
+         */
+        if (
+            operation === 'update'
+        ) {
+
+            data =
+                await updateWorklog(
                     env,
-                    b.worklogid,
-                    b
-                )
+                    body.worklogid,
+                    body
+                );
+        }
 
-                : await createWorklog(
+
+        /**
+         * CREATE
+         */
+        else if (
+            operation === 'create'
+        ) {
+
+            data =
+                await createWorklog(
                     env,
                     wonum,
                     siteid,
-                    b
+                    body
                 );
+        }
+
+
+        /**
+         * UNKNOWN OPERATION
+         */
+        else {
+
+            throw Object.assign(
+                new Error(
+                    `Unsupported Worklog operation: ${operation}`
+                ),
+                {
+                    status: 400
+                }
+            );
+        }
+
 
         return res.json({
+
             message:
-                'Worklog saved successfully.',
+                operation === 'update'
+                    ? 'Worklog updated successfully.'
+                    : 'Worklog created successfully.',
+
             data
         });
 
-    } catch (e) {
 
+    } catch (error) {
+
+        /*
+         * maximoFetch() is also responsible
+         * for recording the Maximo request /
+         * response into the API Request Log.
+         */
         sendError(
             res,
-            e,
+            error,
             'Unable to process worklog.'
         );
     }
 };
 
+
+/**
+ * Export functions for testing / reuse.
+ */
 module.exports.listWorklogs =
     listWorklogs;
 
@@ -365,5 +708,5 @@ module.exports.createWorklog =
 module.exports.updateWorklog =
     updateWorklog;
 
-module.exports.getModifyWorklogUrl =
-    getModifyWorklogUrl;
+module.exports.findWorklog =
+    findWorklog;
