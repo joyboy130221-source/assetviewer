@@ -40,8 +40,18 @@ function apiError(body, status) {
   const message = body?.message || body?.error || maximo?.message || maximo?.['oslc:message'] || `API request failed (${status}).`;
   const reasonCode = body?.reasonCode || maximo?.reasonCode || maximo?.['spi:reasonCode'];
   if (!reasonCode) return message;
-  const cleanMessage = String(message).replace(new RegExp(`^${reasonCode}\s*-?\s*`, 'i'), '');
+  const cleanMessage = String(message).replace(new RegExp(`^${reasonCode}\\s*-?\\s*`, 'i'), '');
   return `${reasonCode} - ${cleanMessage}`;
+}
+function loadDraft() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(cacheKey));
+    if (stored && typeof stored === 'object') {
+      draft = { status: '', memo: '', worklogs: {}, ...stored };
+    }
+  } catch {
+    /* Ignore invalid browser cache and continue loading from Maximo. */
+  }
 }
 function saveDraft() {
   localStorage.setItem(cacheKey, JSON.stringify(draft));
