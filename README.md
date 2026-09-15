@@ -104,3 +104,13 @@ npx vercel dev
 - Maximo object structures remain `mxasset`, `mxapiwo`, and `mxapiworklog`.
 - Administration HTML is static, but protected data/actions are server-side authenticated and permission checked. Protected pages immediately redirect to login when there is no valid session.
 - The existing `frame-ancestors *` policy is retained so the public External View pages can still be embedded in an iframe.
+
+## API Request Log (v3.1)
+
+All outbound Maximo calls made through `lib/maximo.js` are now persisted in PostgreSQL and can be reviewed at `/api-logs.html`.
+
+Captured information includes environment, HTTP method, full request URL, query parameters, request headers/body, response status, response headers/body, duration, success/error state and timestamp. Sensitive values such as `apikey`, authorization tokens, cookies and password/token fields are masked before storage. The masked API key includes only the last four characters and a short SHA-256 fingerprint so environments/keys can be correlated without storing the usable secret in the log.
+
+Access is controlled by the new `apiLogs` role permission. Open **Roles**, edit the required role, enable **API Request Log Page**, and save. Existing roles remain disabled for this new page until explicitly enabled. A newly initialized default administrator role has it enabled.
+
+The `api_request_logs` table and indexes are created automatically by the existing database schema initializer; no manual migration is required.
