@@ -515,10 +515,9 @@ async function updateWorklog(
     } = await maximoFetch(
         env,
         updateUrl, {
-            method: 'POST',
+            method: 'PATCH',
 
             headers: {
-                'x-method-override': 'PATCH',
                 patchtype: 'MERGE'
             },
 
