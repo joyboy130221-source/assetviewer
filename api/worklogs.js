@@ -457,67 +457,63 @@ async function updateWorklog(
     input
 ) {
 
+    if (
+        worklogid === undefined ||
+        worklogid === null ||
+        String(worklogid).trim() === ''
+    ) {
+        throw Object.assign(
+            new Error(
+                `Worklog ID is missing. Received value: ${worklogid}`
+            ),
+            { status: 400 }
+        );
+    }
+
     const id = Number(worklogid);
 
     if (!Number.isFinite(id)) {
         throw Object.assign(
             new Error(
-                'A valid worklogid is required.'
-            ), {
-                status: 400
-            }
+                `Invalid Worklog ID "${worklogid}". Worklog ID must be numeric.`
+            ),
+            { status: 400 }
         );
     }
 
-    /*
-     * STEP 1
-     *
-     * Retrieve Work Order together with
-     * the Worklog relationship.
-     */
-    const workOrder =
-        await getWorkOrderWithWorklogs(
-            env,
-            wonum,
-            siteid
-        );
+    console.log('Updating Worklog:', {
+        wonum,
+        siteid,
+        worklogid: id
+    });
 
+    const workOrder = await getWorkOrderWithWorklogs(
+        env,
+        wonum,
+        siteid
+    );
 
-    /*
-     * STEP 2
-     *
-     * Find the requested Worklog.
-     */
     const worklog = findWorklog(
         workOrder,
         id
     );
 
-
-    /*
-     * STEP 3
-     *
-     * Use localref returned by Maximo.
-     *
-     * DO NOT construct this URL manually.
-     */
     const updateUrl =
         getWorklogUpdateUrl(worklog);
 
+    console.log(
+        'Maximo Worklog Update URL:',
+        updateUrl.toString()
+    );
 
-    /*
-     * STEP 4
-     *
-     * Send the update.
-     */
-    const {
-        data
-    } = await maximoFetch(
+    const { data } = await maximoFetch(
         env,
-        updateUrl, {
-            method: 'PATCH',
+        updateUrl,
+        {
+            method: 'POST',
 
             headers: {
+                'x-method-override': 'PATCH',
                 patchtype: 'MERGE'
             },
 
