@@ -302,16 +302,10 @@ function findWorklog(
     worklogid
 ) {
 
-    const id = Number(worklogid);
+    const id = String(worklogid == null ? '' : worklogid).trim();
 
-    if (!Number.isFinite(id)) {
-        throw Object.assign(
-            new Error(
-                'A valid worklogid is required.'
-            ), {
-                status: 400
-            }
-        );
+    if (!id) {
+        throw Object.assign(new Error('A valid worklogid is required.'), { status: 400 });
     }
 
     const worklogs = Array.isArray(
@@ -322,7 +316,7 @@ function findWorklog(
 
     const worklog = worklogs.find(
         item =>
-        Number(item.worklogid) === id
+        String(item.worklogid == null ? '' : item.worklogid).trim() === id
     );
 
     if (!worklog) {
@@ -372,51 +366,51 @@ function findWorklog(
  * https://.../maxrest/api/os/mxapiwo/
  * _QkVERk9SRC8xMzQ0/modifyworklog/0-116
  */
-function getWorklogUpdateUrl(worklog) {
-
-    if (!worklog) {
-        throw Object.assign(
-            new Error(
-                'Worklog is required.'
-            ), {
-                status: 500
-            }
-        );
-    }
-
-    if (!worklog.localref) {
-        throw Object.assign(
-            new Error(
-                `Worklog ${worklog.worklogid || ''} ` +
-                'does not contain localref.'
-            ), {
-                status: 500
-            }
-        );
-    }
-
-    let url;
-
+function resolveMaximoUrl(env, value) {
+    if (!value) return null;
     try {
-        url = new URL(worklog.localref);
-    } catch (error) {
-        throw Object.assign(
-            new Error(
-                `Invalid Worklog localref: ${worklog.localref}`
-            ), {
-                status: 500
-            }
-        );
+        return new URL(value);
+    } catch (_) {
+        // Some Maximo configurations return a relative relationship URL.
+        // Resolve it against the configured API endpoint instead of assuming
+        // /maximo/api or /maxrest/api.
+        try {
+            const base = String(env.endpoint || '').replace(/\/$/, '') + '/';
+            return new URL(String(value).replace(/^\//, ''), base);
+        } catch (_) {
+            return null;
+        }
     }
-
-    url.searchParams.set(
-        'lean',
-        '1'
-    );
-
-    return url;
 }
 
+function getWorklogUpdateUrl(env, workOrder, worklog) {
+    if (!worklog) {
+        throw Object.assign(new Error('Worklog is required.'), { status: 500 });
+    }
+
+    // Preferred URL: child relationship localref. This commonly looks like:
+    //   .../mxapiwo/<key>/modifyworklog/<child-key>
+    // on both /maximo/api and /maxrest/api deployments.
+    const childUrl = resolveMaximoUrl(env, worklog.localref);
+    if (childUrl) {
+        childUrl.searchParams.set('lean', '1');
+        return { url: childUrl, mode: 'child' };
+    }
+
+    // Some Maximo environments expose only the parent WO href for the
+    // worklog relationship. In that case MERGE the nested worklog through
+    // the WO resource instead of constructing a server-specific path.
+    const parentUrl = resolveMaximoUrl(env, workOrder && workOrder.href);
+    if (parentUrl) {
+        parentUrl.searchParams.set('lean', '1');
+        return { url: parentUrl, mode: 'parent' };
+    }
+
+    throw Object.assign(
+        new Error(`No usable update URL was returned by Maximo for Worklog ${worklog.worklogid || ''}.`),
+        { status: 502 }
+    );
+}
 
 /**
  * ============================================================
@@ -449,83 +443,34 @@ function getWorklogUpdateUrl(worklog) {
  *
  * because the update URL comes directly from Maximo.
  */
-async function updateWorklog(
-    env,
-    wonum,
-    siteid,
-    worklogid,
-    input
-) {
-
-    if (
-        worklogid === undefined ||
-        worklogid === null ||
-        String(worklogid).trim() === ''
-    ) {
-        throw Object.assign(
-            new Error(
-                `Worklog ID is missing. Received value: ${worklogid}`
-            ),
-            { status: 400 }
-        );
+async function updateWorklog(env, wonum, siteid, worklogid, input) {
+    if (worklogid === undefined || worklogid === null || String(worklogid).trim() === '') {
+        throw Object.assign(new Error(`Worklog ID is missing. Received value: ${worklogid}`), { status: 400 });
     }
 
-    const id = Number(worklogid);
+    // Do not force Number(worklogid). Maximo identifiers can differ between
+    // object structures/environments. Compare them as strings.
+    const id = String(worklogid).trim();
+    const workOrder = await getWorkOrderWithWorklogs(env, wonum, siteid);
+    const worklog = findWorklog(workOrder, id);
+    const target = getWorklogUpdateUrl(env, workOrder, worklog);
+    const normalized = normalize(input);
 
-    if (!Number.isFinite(id)) {
-        throw Object.assign(
-            new Error(
-                `Invalid Worklog ID "${worklogid}". Worklog ID must be numeric.`
-            ),
-            { status: 400 }
-        );
-    }
+    const body = target.mode === 'child'
+        ? normalized
+        : { worklog: [{ worklogid: worklog.worklogid, ...normalized }] };
 
-    console.log('Updating Worklog:', {
-        wonum,
-        siteid,
-        worklogid: id
+    const { data } = await maximoFetch(env, target.url, {
+        method: 'POST',
+        headers: {
+            'x-method-override': 'PATCH',
+            patchtype: 'MERGE'
+        },
+        body: JSON.stringify(body)
     });
-
-    const workOrder = await getWorkOrderWithWorklogs(
-        env,
-        wonum,
-        siteid
-    );
-
-    const worklog = findWorklog(
-        workOrder,
-        id
-    );
-
-    const updateUrl =
-        getWorklogUpdateUrl(worklog);
-
-    console.log(
-        'Maximo Worklog Update URL:',
-        updateUrl.toString()
-    );
-
-    const { data } = await maximoFetch(
-        env,
-        updateUrl,
-        {
-            method: 'POST',
-
-            headers: {
-                'x-method-override': 'PATCH',
-                patchtype: 'MERGE'
-            },
-
-            body: JSON.stringify(
-                normalize(input)
-            )
-        }
-    );
 
     return data;
 }
-
 
 /**
  * ============================================================
