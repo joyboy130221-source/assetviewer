@@ -98,3 +98,16 @@ a { color: #1769e0; }
 .secondary-button.danger { border-color: #f0c3c3; color: #a12626; }
 @media (max-width: 900px) { .detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .detail-grid { grid-template-columns: 1fr; } .detail-item.wide { grid-column: auto; } .section-heading, .sticky-submit { align-items: stretch; flex-direction: column; } .sticky-submit .primary-button { width: 100%; } }
+
+/* Asset edit mode */
+.attribute-toolbar { display: flex; align-items: center; gap: 10px; }
+.attribute-input, .attributes-card select { width: 100%; min-width: 180px; padding: 10px 12px; border: 1px solid #cbd6e4; border-radius: 9px; background: white; color: #14213d; font: inherit; }
+.attribute-input:focus, .attributes-card select:focus { border-color: #1769e0; outline: 3px solid rgba(23,105,224,.12); }
+.friendly-name { display: block; color: #31415c; font-weight: 750; }
+.technical-name { display: block; margin-top: 3px; color: #8a96a8; font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 500; }
+.asset-edit-actions { position: sticky; bottom: 12px; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 18px; padding: 14px 16px; border: 1px solid #d9e2ee; border-radius: 14px; background: rgba(255,255,255,.97); box-shadow: 0 12px 35px rgba(26,45,75,.12); backdrop-filter: blur(8px); }
+.asset-edit-actions[hidden] { display: none; }
+.asset-edit-actions p { margin: 0; color: #68758b; font-size: 13px; }
+button:disabled, input:disabled { cursor: not-allowed; opacity: .6; }
+@media (max-width: 760px) { .attribute-toolbar { width: 100%; } .attribute-toolbar input { flex: 1; } .asset-edit-actions { align-items: stretch; flex-direction: column; } .asset-edit-actions .inline-actions { justify-content: flex-end; } }
+@media (max-width: 480px) { .attribute-toolbar { align-items: stretch; flex-direction: column; } .attribute-toolbar > * { width: 100%; } .asset-edit-actions .inline-actions > * { flex: 1; } }

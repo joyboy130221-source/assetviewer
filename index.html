@@ -53,7 +53,10 @@
             <h2>All attributes</h2>
             <p id="attributeCount" class="subtitle"></p>
           </div>
-          <input id="attributeSearch" type="search" placeholder="Search attributes" aria-label="Search attributes">
+          <div class="attribute-toolbar">
+            <input id="attributeSearch" type="search" placeholder="Search attributes" aria-label="Search attributes">
+            <button id="editButton" class="secondary-button" type="button">Edit</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -62,9 +65,20 @@
           </table>
         </div>
         <p id="noAttributes" class="no-results" hidden>No matching attributes.</p>
+        <p id="assetFormMessage" class="form-message" hidden aria-live="polite"></p>
+        <div id="editActions" class="asset-edit-actions" hidden>
+          <p>Review your changes before submitting. Only modified attributes are sent to Maximo.</p>
+          <div class="inline-actions">
+            <button id="cancelEditButton" class="secondary-button" type="button">Cancel</button>
+            <button id="submitButton" class="primary-button" type="button">Submit</button>
+          </div>
+        </div>
       </section>
     </div>
   </main>
+  <div id="saveLoadingOverlay" class="loading-overlay" hidden aria-live="assertive">
+    <div class="loading-panel"><span class="spinner" aria-hidden="true"></span><span>Saving asset changes to Maximo…</span></div>
+  </div>
   <script src="app.js"></script>
 </body>
 </html>

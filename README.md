@@ -73,3 +73,9 @@ The page:
 ### Important Maximo configuration note
 
 Maximo REST object structures are configurable. This implementation uses the standard `MXAPIWO` and `MXAPIWORKLOG` names. If your environment renamed, restricted, or customized those object structures/relationships, update the names or selected attributes in the corresponding files under `/api`.
+
+## Edit asset attributes
+
+The Asset Viewer now includes an **Edit** button in the **All attributes** section. Primitive attributes are rendered as friendly form controls: dates use a date picker, text uses a text box, numbers use numeric input, and booleans use Yes/No. Maximo identity/system fields such as `assetnum`, `assetid`, `siteid`, `orgid`, `href`, and `_rowstamp` remain read-only to avoid changing the resource identity.
+
+Only changed attributes are submitted. The browser sends `POST /api/asset` with `{ assetId, attributes }`; the server keeps the API key private, locates the Maximo asset resource, and performs the Maximo update using POST with `x-method-override: PATCH` and `patchtype: MERGE`. The page asks for confirmation, shows a blocking loading overlay, displays Maximo error messages, reloads the saved record, and returns the form to read-only mode after success.
